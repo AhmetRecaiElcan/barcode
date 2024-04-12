@@ -27,6 +27,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   TextEditingController _productNameController = TextEditingController();
   TextEditingController _quantityController = TextEditingController();
+  TextEditingController _priceController = TextEditingController();
   List<Product> _products = [];
 
   @override
@@ -45,6 +46,8 @@ class _MainPageState extends State<MainPage> {
               children: <Widget>[
                 Text('Barkod: ${_products[index].barcode}'),
                 Text('Adedi: ${_products[index].quantity}'),
+                Text('Fiyatı: ${_products[index].price.toStringAsFixed(2)} TL',
+                    style: TextStyle(color: Colors.green)),
               ],
             ),
             leading:
@@ -93,6 +96,12 @@ class _MainPageState extends State<MainPage> {
                   decoration: InputDecoration(labelText: 'Adedi'),
                   keyboardType: TextInputType.number,
                 ),
+                TextField(
+                  controller: _priceController,
+                  decoration:
+                      InputDecoration(labelText: 'Fiyat (TL)', prefixText: '₺'),
+                  keyboardType: TextInputType.number,
+                ),
               ],
             ),
           ),
@@ -114,8 +123,12 @@ class _MainPageState extends State<MainPage> {
                       fontSize: 16.0);
 
                   var image = await _getImage();
-                  _saveProduct(_productNameController.text, barcodeScanResult,
-                      int.parse(_quantityController.text), image);
+                  _saveProduct(
+                      _productNameController.text,
+                      barcodeScanResult,
+                      int.parse(_quantityController.text),
+                      double.parse(_priceController.text),
+                      image);
                   Navigator.of(context).pop();
                 }
               },
@@ -123,8 +136,12 @@ class _MainPageState extends State<MainPage> {
             ),
             TextButton(
               onPressed: () {
-                _saveProduct(_productNameController.text, '',
-                    int.parse(_quantityController.text), null);
+                _saveProduct(
+                    _productNameController.text,
+                    '',
+                    int.parse(_quantityController.text),
+                    double.parse(_priceController.text),
+                    null);
                 Navigator.of(context).pop();
               },
               child: Text('Kaydet'),
@@ -144,10 +161,14 @@ class _MainPageState extends State<MainPage> {
     return [];
   }
 
-  void _saveProduct(
-      String productName, String barcode, int quantity, List<int>? image) {
+  void _saveProduct(String productName, String barcode, int quantity,
+      double price, List<int>? image) {
     _products.add(Product(
-        name: productName, barcode: barcode, quantity: quantity, image: image));
+        name: productName,
+        barcode: barcode,
+        quantity: quantity,
+        price: price,
+        image: image));
     setState(() {}); // Widget'i güncellemek için setState kullanılıyor
   }
 
@@ -167,8 +188,8 @@ class _MainPageState extends State<MainPage> {
 
       var product = _products.firstWhere(
           (element) => element.barcode == barcodeScanResult,
-          orElse: () =>
-              Product(name: '', barcode: '', quantity: 0, image: null));
+          orElse: () => Product(
+              name: '', barcode: '', quantity: 0, price: 0.0, image: null));
       if (product.name.isNotEmpty) {
         product.quantity -= 1;
         setState(() {}); // Widget'i güncellemek için setState kullanılıyor
@@ -180,6 +201,7 @@ class _MainPageState extends State<MainPage> {
   void dispose() {
     _productNameController.dispose();
     _quantityController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 }
@@ -188,11 +210,13 @@ class Product {
   String name;
   String barcode;
   int quantity;
+  double price;
   List<int>? image;
 
   Product(
       {required this.name,
       required this.barcode,
       required this.quantity,
+      required this.price,
       required this.image});
 }
