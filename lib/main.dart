@@ -60,24 +60,25 @@ class _MainPageState extends State<MainPage> {
         children: <Widget>[
           FloatingActionButton(
             onPressed: () {
-              _showAddProductDialog(context);
+              _scanBarcode(context);
             },
-            child: Icon(Icons.add),
+            backgroundColor: Colors.red,
+            child: Icon(Icons.camera_alt),
           ),
           SizedBox(width: 10),
           FloatingActionButton(
             onPressed: () {
-              _scanAndDecreaseQuantity(context);
+              _addProduct(context);
             },
-            backgroundColor: Colors.red,
-            child: Icon(Icons.camera_alt),
+            backgroundColor: Colors.green,
+            child: Icon(Icons.add),
           ),
         ],
       ),
     );
   }
 
-  void _showAddProductDialog(BuildContext context) {
+  void _addProduct(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -172,29 +173,73 @@ class _MainPageState extends State<MainPage> {
     setState(() {}); // Widget'i güncellemek için setState kullanılıyor
   }
 
-  void _scanAndDecreaseQuantity(BuildContext context) async {
-    String barcodeScanResult = await FlutterBarcodeScanner.scanBarcode(
-        '#ff6666', 'Cancel', true, ScanMode.BARCODE);
+  void _scanBarcode(BuildContext context) async {
+    while (true) {
+      String barcodeScanResult = await FlutterBarcodeScanner.scanBarcode(
+          '#ff6666', 'Cancel', true, ScanMode.BARCODE);
 
-    if (mounted) {
-      Fluttertoast.showToast(
-          msg: 'Barcode: $barcodeScanResult',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.blue,
-          textColor: Colors.white,
-          fontSize: 16.0);
+      if (barcodeScanResult == '-1') {
+        break;
+      }
 
-      var product = _products.firstWhere(
-          (element) => element.barcode == barcodeScanResult,
-          orElse: () => Product(
-              name: '', barcode: '', quantity: 0, price: 0.0, image: null));
-      if (product.name.isNotEmpty) {
-        product.quantity -= 1;
-        setState(() {}); // Widget'i güncellemek için setState kullanılıyor
+      if (mounted) {
+        Fluttertoast.showToast(
+            msg: 'Barcode: $barcodeScanResult',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.blue,
+            textColor: Colors.white,
+            fontSize: 16.0);
+
+        _showScannedResult(context, barcodeScanResult);
       }
     }
+  }
+
+  void _showScannedResult(BuildContext context, String scannedBarcode) {
+    Product foundProduct = _products.firstWhere(
+      (product) => product.barcode == scannedBarcode,
+      orElse: () => Product(
+        name: '',
+        barcode: '',
+        quantity: 0,
+        price: 0.0,
+        image: null,
+      ),
+    );
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Sonuç'),
+          content: SingleChildScrollView(
+            child: foundProduct.name.isNotEmpty
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Ürün: ${foundProduct.name}'),
+                      Text('Fiyat: ${foundProduct.price.toString()} TL'),
+                    ],
+                  )
+                : Text('Ürün bulunamadı.'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                if (foundProduct.name.isNotEmpty) {
+                  foundProduct.quantity--;
+                  setState(() {});
+                }
+                Navigator.of(context).pop();
+              },
+              child: Text('Tamam'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
