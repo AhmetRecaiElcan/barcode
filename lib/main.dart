@@ -60,7 +60,7 @@ class _MainPageState extends State<MainPage> {
         children: <Widget>[
           FloatingActionButton(
             onPressed: () {
-              _scanBarcode(context);
+              _scanBarcodes(context);
             },
             backgroundColor: Colors.red,
             child: Icon(Icons.camera_alt),
@@ -173,7 +173,9 @@ class _MainPageState extends State<MainPage> {
     setState(() {}); // Widget'i güncellemek için setState kullanılıyor
   }
 
-  void _scanBarcode(BuildContext context) async {
+  void _scanBarcodes(BuildContext context) async {
+    List<Product> scannedProducts = [];
+
     while (true) {
       String barcodeScanResult = await FlutterBarcodeScanner.scanBarcode(
           '#ff6666', 'Cancel', true, ScanMode.BARCODE);
@@ -192,14 +194,19 @@ class _MainPageState extends State<MainPage> {
             textColor: Colors.white,
             fontSize: 16.0);
 
-        _showScannedResult(context, barcodeScanResult);
+        var product = _findProduct(barcodeScanResult);
+        if (product != null) {
+          scannedProducts.add(product);
+        }
       }
     }
+
+    _showScannedResults(context, scannedProducts);
   }
 
-  void _showScannedResult(BuildContext context, String scannedBarcode) {
-    Product foundProduct = _products.firstWhere(
-      (product) => product.barcode == scannedBarcode,
+  Product? _findProduct(String barcode) {
+    return _products.firstWhere(
+      (product) => product.barcode == barcode,
       orElse: () => Product(
         name: '',
         barcode: '',
@@ -208,30 +215,39 @@ class _MainPageState extends State<MainPage> {
         image: null,
       ),
     );
+  }
 
+  void _showScannedResults(
+      BuildContext context, List<Product> scannedProducts) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Sonuç'),
+          title: Text('Sonuçlar'),
           content: SingleChildScrollView(
-            child: foundProduct.name.isNotEmpty
-                ? Column(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: scannedProducts.map((product) {
+                return ListTile(
+                  title: Text('Ürün: ${product.name}'),
+                  subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Ürün: ${foundProduct.name}'),
-                      Text('Fiyat: ${foundProduct.price.toString()} TL'),
+                      Text('Barkod: ${product.barcode}'),
+                      Text('Fiyat: ${product.price.toString()} TL'),
                     ],
-                  )
-                : Text('Ürün bulunamadı.'),
+                  ),
+                );
+              }).toList(),
+            ),
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                if (foundProduct.name.isNotEmpty) {
-                  foundProduct.quantity--;
-                  setState(() {});
-                }
+                scannedProducts.forEach((product) {
+                  product.quantity--;
+                });
+                setState(() {});
                 Navigator.of(context).pop();
               },
               child: Text('Tamam'),
@@ -240,14 +256,6 @@ class _MainPageState extends State<MainPage> {
         );
       },
     );
-  }
-
-  @override
-  void dispose() {
-    _productNameController.dispose();
-    _quantityController.dispose();
-    _priceController.dispose();
-    super.dispose();
   }
 }
 
